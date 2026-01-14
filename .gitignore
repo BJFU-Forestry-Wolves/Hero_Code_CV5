@@ -1,0 +1,101 @@
+# .gitignore — 忽略项目中常见的编辑器设置、构建产物与临时文件
+# 该文件为团队/个人工作区排除不必要提交的文件，避免把本地配置或编译产物同步到仓库中
+
+# VS Code 工作区与设置（避免将个人编辑器配置提交）
+.vscode/
+
+# Visual Studio/Keil 用户配置（含用户名/会话相关的临时文件）
+.vs/
+*.vcxproj.user    # Visual Studio 用户特定项目文件
+*.suo             # Visual Studio Solution 用户选项
+
+# Keil 编译产生的中间文件夹
+Objects/
+Listings/
+
+# 编译产生的各类中间文件（防止散落在根目录）
+*.o
+*.d
+*.crf
+*.dep
+*.axf
+*.hex
+*.htm
+*.map
+*.lst
+*.bak
+*.sct
+*.iex
+*.lnp
+
+# Keil 的用户配置和调试文件（这些每个人电脑都不一样，不需要同步）
+*.uvguix.*
+*.uvoptx
+*.scvd
+JLinkLog.txt
+
+
+# Keil/MDK 编译产生的二进制与中间文件
+# 例如：axf（ELF 可执行），elf/hex/bin（固件），o/obj（目标文件），map/lst 链接/列表文件等
+*.axf
+*.elf
+*.hex
+*.bin
+*.o
+*.obj
+*.map
+*.lst
+*.d     # 自动生成的依赖文件（有时由构建系统产生）
+*.dep
+*.srec
+*.out
+*.lib
+*.a
+
+# 常见构建/输出目录（避免把编译输出夹提交）
+build/
+Build/
+Debug/
+Release/
+Bin/
+obj/
+out/
+
+# RTE 自动生成的中间依赖/包（由工具链或 IDE 生成）
+RTE/
+**/RTE/
+*.d
+
+# 编辑器/用户临时文件（备份、交换文件、临时日志等）
+*~               # 编辑器临时备份文件，如 filename~
+*.swp            # vim/vi 交换文件
+*.tmp
+*.temp
+*.log
+*.cache
+*.bak
+*.orig
+
+# 其他 IDE/项目配置文件（例如 IntelliJ 系列）
+.idea/
+*.iml
+
+# 系统产生的隐藏文件（macOS / Windows 缩略/索引文件）
+.DS_Store
+Thumbs.db
+
+# Misc（其他可能的发布或打包文件）
+*.vsix
+
+# 重要提示：
+# 如果仓库中已有上述编译产物被跟踪（已提交），需要运行
+#   git rm --cached <file>
+# 或批量清理：
+#   git rm -r --cached . && git add . && git commit -m "Remove build artifacts from tracking"
+# 以确保这些文件从仓库索引中移除但仍保留在本地磁盘上
+
+# Backup directory (local backups created by conversion tool)
+.backup/
+.backup/**
+
+# End of .gitignore
