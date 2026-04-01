@@ -14,8 +14,8 @@ void Referee_Task(void const * argument) {
 //		}
 //		Referee_Update();
 //		osDelay(200);
-		float* power = powerConstPtr();
-		*power = 		bref_data.chass_power * 150;
+//		float* power = powerConstPtr();
+//		*power = 		bref_data.chass_power * 150;
 
 
 	}
