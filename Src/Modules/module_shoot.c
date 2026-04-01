@@ -71,7 +71,7 @@ void Shooter_Control() {
     Shooter_ShootControl();
     
 		// 控制拨盘
-//    Shooter_FeederControl();		
+    //Shooter_FeederControl();		
 
 		// 电机输出控制
     Shooter_ShooterMotorOutput();

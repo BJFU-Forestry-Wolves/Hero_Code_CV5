@@ -21,6 +21,8 @@ void Shoot_Task(void const * argument) {
 
     forever {
       Shooter_Control();
+	  
+		
       osDelay(2);
     }
 }

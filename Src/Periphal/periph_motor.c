@@ -98,7 +98,9 @@ void Motor_InitAllMotors() {
 	  Motor_ChassisMotors.motor_handle[0] = &Motor_ChassisFontRightMotor;
     Motor_ChassisMotors.motor_handle[1] = &Motor_ChassisFontLeftMotor;
     Motor_ChassisMotors.motor_handle[2] = &Motor_ChassisBackLeftMotor;
-    Motor_ChassisMotors.motor_handle[3] = &Motor_ChassisBackRightMotor;		
+    Motor_ChassisMotors.motor_handle[3] = &Motor_ChassisBackRightMotor;
+
+		
 }
 
 
