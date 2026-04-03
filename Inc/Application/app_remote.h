@@ -39,8 +39,9 @@ void Remote_FeedStateJudge();
 void Remote_YawStateJudge();
 
 void shooter_control();//¼±¼±ÈçÂÉÁî
-
-
+uint8_t Is_Key_Triggered(uint8_t current_state, uint8_t *last_state, uint32_t *last_tick, uint32_t cool_time) ;
+extern int count_cqie;
+extern uint8_t q_mode ;
 #endif
 
 #ifdef __cplusplus

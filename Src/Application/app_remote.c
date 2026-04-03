@@ -25,6 +25,7 @@
 Remote_RemoteControlTypeDef Remote_remoteControlData;
 Math_SlopeParamTypeDef Remote_ChassisFBSlope;
 
+int count_cqie = 0;
 
 /**
   * @brief          遥控任务
@@ -140,6 +141,8 @@ void Remote_MouseShooterModeSet() {
     // 获取数据指针
     Remote_RemoteDataTypeDef *data = Remote_GetRemoteDataPtr();  // 遥控器原始数据
     Shoot_StatusTypeDef *shooter = Shooter_GetShooterControlPtr(); // 射击系统状态
+	
+
 
     /*---------------- 摩擦轮安全检查 ----------------*/
   
@@ -162,6 +165,7 @@ void Remote_MouseShooterModeSet() {
 				Shooter_FeederReady();
 				Shooter_SingleShootReset();         // 重置单发状态机
 				Shooter_ChangeFeederMode(Feeder_SINGLE); // 触发单发模式
+				
 			
 		}
 		
@@ -304,7 +308,11 @@ void Remote_RemoteProcess() {
 * @param      NULL
 * @retval     NULL
 */
-
+static uint32_t tick_b = 0, tick_q = 0,tick_v = 0,tick_e = 0;
+static uint8_t last_b = 0, last_q = 0,last_v = 0,last_e = 0;
+static uint8_t delay_step = 0;      // 步骤状态机
+static uint32_t delay_start_tick = 0;
+uint8_t q_mode = 3;
 
 void Remote_KeyMouseProcess() { 
     // 获取各模块数据指针
@@ -410,7 +418,7 @@ void Remote_KeyMouseProcess() {
     GimbalYaw_SetYawRef(buscomm->yaw_ref);
 
     // 计算俯仰轴目标角度（鼠标移动 + 自动瞄准补偿）
-    float pitch_ref = ((float)data->mouse.y * -MOUSE_PITCH_ANGLE_TO_FACT + autoaim_pitch);
+    float pitch_ref = ((float)data->mouse.y * MOUSE_PITCH_ANGLE_TO_FACT + autoaim_pitch);
     GimbalPitch_SetPitchRef(Gimbal_LimitPitch(-pitch_ref));  // 设置俯仰角度并限制范围
 
     /*---------------------- 射击控制 -----------------------*/
@@ -419,15 +427,27 @@ void Remote_KeyMouseProcess() {
 		{ 
 			Shooter_ChangeShooterMode(Shoot_FAST);		// 开启摩擦轮	
 			Shooter_ChangeFeederMode(Feeder_READY);		// 设置供弹电机状态
+			q_mode = 1;
 		}	
 
     if (data->key.g == 1) 
 		{
 			Shooter_ChangeShooterMode(Shoot_NULL);   // 停止射击
 			Shooter_ChangeFeederMode(Feeder_NULL);		// 设置供弹电机状态
+			q_mode = 0;
 		}
-			
+/**************************************************for draw************************************************************/	
+		if (Is_Key_Triggered(data->key.b, &last_b, &tick_b, 300))
+		{
+			Referee_Setup();
+		}
+
+		if (Is_Key_Triggered(data->key.v, &last_v, &tick_v, 600))
+		{
+			Draw_ClearAll();
+		}	
 }
+
 
 /**
  * @brief 控制底盘进入跟随模式，并根据遥控器输入设置底盘的运动参考值。
@@ -499,4 +519,28 @@ void Remote_YawStateJudge()
 		{
 			yaw->yaw_offset = Offset_Back;
 		}
+}
+
+/**
+ * @brief 按键边沿检测与冷却逻辑集成函数
+ * * @param current_state 当前按键的状态 (1为按下, 0为松开)
+ * @param last_state    指向记录上次状态的变量指针
+ * @param last_tick     指向记录上次触发时间的变量指针
+ * @param cool_time     设定的冷却时间 (ms)
+ * @return uint8_t      1: 触发成功, 0: 未触发
+ */
+uint8_t Is_Key_Triggered(uint8_t current_state, uint8_t *last_state, uint32_t *last_tick, uint32_t cool_time) 
+{
+    uint8_t triggered = 0;
+    uint32_t now = HAL_GetTick();
+
+    // 条件：当前是按下(1) && 上次是松开(0) && 时间差超过冷却时间
+    if (current_state == 1 && *last_state == 0 && (now - *last_tick) > cool_time) 
+    {
+        *last_tick = now;  // 更新时间戳
+        triggered = 1;     // 标记触发成功
+    }
+
+    *last_state = current_state; // 实时更新状态用于下次对比
+    return triggered;
 }

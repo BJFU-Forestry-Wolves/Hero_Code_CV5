@@ -98,7 +98,7 @@ float Shooter_GetShootSpeedOffset() {
     Referee_RefereeDataTypeDef *referee = Referee_GetRefereeDataPtr();
     float offset_speed;
 
-    switch (referee->shooter_heat0_speed_limit) {
+    switch (referee->status.shooter_limit) {
         case 15: 
             offset_speed = shooter->shoot_speed_offset.speed_15mm_offset;
             break;
@@ -177,7 +177,7 @@ float Shooter_GetRefereeSpeed() {
     Shoot_StatusTypeDef *shooter = Shooter_GetShooterControlPtr();
 
     float speed;
-    switch (referee->shooter_heat0_speed_limit) {
+    switch (referee->status.shooter_limit) {
         case 15: 
             speed = shooter->shooter_speed_15mpers;
             break;
@@ -211,9 +211,9 @@ void Shooter_UpdataControlData() {
     Referee_RefereeDataTypeDef *referee = Referee_GetRefereeDataPtr();
 	
 		// 更新42mm弹丸冷却热量
-    shooter->heat_ctrl.shooter_42mm_cooling_heat = (float)referee->shooter_heat0;
+    shooter->heat_ctrl.shooter_42mm_cooling_heat = (float)referee->status.shoot_heat;
     // 更新42mm弹丸冷却速率
-		shooter->heat_ctrl.shooter_42mm_cooling_rate = (float)referee->shooter_heat0_cooling_limit;
+//		shooter->heat_ctrl.shooter_42mm_cooling_rate = (float)referee->status.;
     
     Shooter_FeederMotorLockedJudge();
 }
@@ -379,8 +379,8 @@ void Shooter_ShootControl() {
           Shooter_SetShooterSpeed(Const_ShooterSlowSpeed);
           break;
       case Shoot_REFEREE:								//裁判系统控制模式
-          GPIO_Set(LASER);
-          Shooter_SetShooterSpeed(Shooter_GetRefereeSpeed() + Shooter_GetShootSpeedOffset());
+//          GPIO_Set(LASER);
+//          Shooter_SetShooterSpeed(Shooter_GetRefereeSpeed() + Shooter_GetShootSpeedOffset());
           break;
       default:
           break;
@@ -461,6 +461,7 @@ void Shooter_FeederControl() {
     int current_pid_num = 0;
     switch (shooter->feeder_mode) {
       case Feeder_NULL:
+					
           current_pid_num = 1;
           Shooter_SetFeederSpeed(0);
           break;
@@ -542,3 +543,4 @@ void Shooter_ShooterMotorOutput() {
 				
     }
 }
+

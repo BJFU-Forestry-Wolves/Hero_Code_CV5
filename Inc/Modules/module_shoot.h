@@ -126,6 +126,8 @@ float* Shooter_GetRefereeSpeedPtr(void);
 
 void Shooter_FeederReady();
 
+void Shooter_FeedMotorOutput();
+
 #endif
 
 #ifdef __cplusplus

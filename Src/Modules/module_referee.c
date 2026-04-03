@@ -1,25 +1,17 @@
-/*
- *  Project      : Polaris
- * 
- *  file         : module_referee.c
- *  Description  : Polaris
- *  LastEditors  : Polaris
- *  Date         : 2021-05-04 20:53:31
- *  LastEditTime : 2023-05-05 11:18:25
- */
-
-
-#include "module_referee.h"
-
 #include "periph_referee.h"
-#include "cmsis_os.h"
+#include "module_referee.h"
+#include "app_remote.h"
 
-#define					AIM_LINE_LINE_MODE					3
-#define					AIM_LINE_LINE_NUM						4
-
-uint8_t referee_setup_flag = 0;
-
-
+Referee_DrawDataTypeDef Referee_DrawData;
+const uint16_t Const_Referee_GRAPHIC_BUFFER_MAX_LENGTH              = 21;                   // 图形缓冲区最大长度
+const Referee_RefereeCmdTypeDef Const_Referee_DATA_CMD_ID_LIST[6]   = {                     // 裁判系统交互数据内容ID
+    {0x0100,    2,      NULL},              // 客户端删除图形
+    {0x0101,    15,     NULL},              // 客户端绘制一个图形
+    {0x0102,    30,     NULL},              // 客户端绘制二个图形
+    {0x0103,    75,     NULL},              // 客户端绘制五个图形
+    {0x0104,    105,    NULL},              // 客户端绘制七个图形
+    {0x0110,    45,     NULL}               // 客户端绘制字符图形
+};
 /********** Drawing Constants **********/
 
 // 关于图层：图层0 ~ 9，高图层遮盖低图层
@@ -28,11 +20,11 @@ uint8_t referee_setup_flag = 0;
 
 // 关于坐标：左下角为 (0, 0)，水平方向为 X，垂直方向为 Y
 
-const uint8_t AIM_LINE_LAYER        = 2;
-const Draw_Color AIM_LINE_COLOR     = Draw_COLOR_GREEN;
-//const uint8_t AIM_LINE_LINE_MODE    = 3;
-//const uint8_t AIM_LINE_LINE_NUM     = 3 + 1;
-const uint16_t AIM_LINES[AIM_LINE_LINE_MODE][AIM_LINE_LINE_NUM][6] = {  
+const uint8_t AIM_LINE_LAYER        = 1;
+const Draw_Color AIM_LINE_COLOR     = Draw_COLOR_CYAN;
+const uint8_t AIM_LINE_LINE_MODE    = 3;                     //3种弹速模式
+const uint8_t AIM_LINE_LINE_NUM     = 6;                 //4条直线
+const uint16_t AIM_LINES[AIM_LINE_LINE_MODE][AIM_LINE_LINE_NUM][6] = {     //一个三维数组
     // ID, Width, X1, Y1, X2, Y2
     {       // Mode 0: 15 m/s
         {0x101, 2, 960, 500, 960, 620},     // Vertical Line
@@ -44,121 +36,230 @@ const uint16_t AIM_LINES[AIM_LINE_LINE_MODE][AIM_LINE_LINE_NUM][6] = {
         {0x102, 4, 850, 600, 950, 600},     // Horizontal Line 1
         {0x103, 2, 850, 540, 950, 540},     // Horizontal Line 2
         {0x104, 2, 870, 500, 930, 500}      // Horizontal Line 3
-    }, {    // Mode 2: 30 m/s
-        {0x101, 2, 960, 500, 960, 620},     // Vertical Line
-        {0x102, 4, 850, 600, 950, 600},     // Horizontal Line 1
-        {0x103, 2, 850, 580, 950, 580},     // Horizontal Line 2
-        {0x104, 2, 870, 560, 930, 560}      // Horizontal Line 3
+    }, {    // Mode 2: 30 m/s（向上延伸的刻度尺样式）
+{0x101, 2, 960, 320, 960, 620},     // 垂直线（整体下移 40）
+{0x102, 2, 945, 380, 975, 380},     // 水平线 1（最短 50px，整体下移 40）
+{0x103, 2, 935, 420, 985, 420},     // 水平线 2（长度 70px，整体下移 40）
+{0x104, 2, 925, 460, 995, 460},    // 水平线 3（长度 90px，整体下移 40）
+{0x105, 2, 915, 500, 1005, 500},    // 水平线 4（长度 110px，整体下移 40）
+{0x106, 3, 895, 540, 1025, 540}     // 水平线 5（最长 150px，整体下移 40）
     }
 };
+graphic_data_struct_t Referee_dummyGraphicCmd = {{0x00, 0x00, 0x00}, Draw_OPERATE_NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-const uint8_t CROSSHAIR_LAYER       = 2;
-const Draw_Color CROSSHAIR_COLOR    = Draw_COLOR_GREEN;
-const uint16_t CROSSHAIR[5]         = {0x201, 2, 960, 560, 10};  // ID, Width, X, Y, R
-
-const uint8_t WIDTH_MARK_LAYER      = 2;
-const Draw_Color WIDTH_MARK_COLOR   = Draw_COLOR_YELLOW;
-const uint16_t WIDTH_MARK_GYRO[2][6] = {      // ID, Width, X0, Y0, X1, Y1
-    {0x301, 2, 660, 400, 660, 200},     // Left Mark Line, Normal
-    {0x302, 2, 1260, 400, 1260, 200},     // Right Mark Line, Normal
-};
-const uint16_t WIDTH_MARK_NORMAL[2][6] = {
-    {0x301, 2, 660, 400, 960, 200},     // Left Mark Line, Gyro Mode
-    {0x302, 2, 1260, 400, 960, 200},     // Right Mark Line, Gyro Mode
-};
-
-const uint8_t CAP_STATE_LAYER[2]    = {3, 2};   // Foreground, Background
-const Draw_Color CAP_STATE_COLOR[5] = {
-    Draw_COLOR_WHITE,           // Background
-    Draw_COLOR_GREEN,           // Text
-    Draw_COLOR_GREEN,           // Foreground, Full (50% ~ 100%)
-    Draw_COLOR_YELLOW,          // Foreground, Insufficient (10% ~ 50%)
-    Draw_COLOR_ORANGE           // Foreground, Empty (0% ~ 10%)
-};
-const uint16_t CAP_STATE[4]         = {6, 960, 240, 40};     // Width, X, Y, R
-const uint16_t CAP_STATE_CIRCLE     = 0x401;            // Background Circle ID
-const uint16_t CAP_STATE_ARC        = 0x402;            // Foreground Arc ID
-const uint16_t CAP_STATE_TEXT[5]    = {0x403, 20, 2, 900, 240};     // ID, Font Size, Width, X, Y
-const char *CAP_STATE_TEXT_STR      = "CAP";
-
-const uint8_t PITCH_METER_LAYER     = 2;
-const Draw_Color PITCH_METER_COLOR  = Draw_COLOR_GREEN;
-const uint16_t PITCH_METER_TEXT[5]  = {0x501, 20, 2, 1500, 540};     // ID, Font Size, Width, X, Y
-const char *PITCH_METER_TEXT_STR    = "PITCH:";
-const uint16_t PITCH_METER_VALUE[6] = {0x502, 20, 3, 2, 1200, 540};  // ID, Font Size, Precision, Width, X, Y
-
-const uint8_t AIM_MODE_LAYER        = 2;
-const Draw_Color AIM_MODE_COLOR     = Draw_COLOR_GREEN;
-const uint16_t AIM_MODE_TEXT[5]     = {0x501, 20, 2, 600, 840};     // ID, Font Size, Width, X, Y
-const uint16_t AIM_MODE_VALUE_TEXT[5]  = {0x501, 20, 2, 1000, 840};     // ID, Font Size, Width, X, Y
-const char *AIM_MODE_TEXT_STR       = "AIM_MODE:";
-const char *NORMAL_AIM_TEXT_STR     = "NORMAL";
-const char *ARMOR_AIM_TEXT_STR      = "ARMOR";
-const char *BIG_BUFF_AIM_TEXT_STR   = "BIG_BUF";
-const char *SMALL_BUFF_AIM_TEXT_STR = "SMALL_BUF";
-
-const uint8_t CHASSIS_MODE_LAYER    = 2;
-const Draw_Color CHASSIS_MODE_COLOR = Draw_COLOR_GREEN;
-const uint16_t CHASSIS_MODE_TEXT[5] = {0x501, 20, 2, 600, 540};     // ID, Font Size, Width, X, Y
-const uint16_t CHASSIS_MODE_VALUE_TEXT[5]  = {0x501, 20, 2, 1000, 540};     // ID, Font Size, Width, X, Y
-const char *CHASSIS_MODE_TEXT_STR  = "CHASSIS_MODE:";
-const char *NORMAL_RUN_TEXT_STR    = "NORMAL";
-const char *GYRO_RUN_TEXT_STR      = "GYRO";
-
-
-
-/********** END OF Drawing Constants **********/
-
-
-Referee_DrawDataTypeDef Referee_DrawData;
-
-
-
+graphic_data graphicData;
 /**
-  * @brief      设置车宽线模式
-  * @param      mode: 车宽线模式（1为小陀螺，0为普通）
+  * @brief      发送客户端自定义图形命令组
+  * @param      graph: 数组包括指定数量个图形命令
+  * @param      mode: 发送模式，1、2、3、4对应1、2、5、7个一组
   * @retval     无
   */
-void Referee_SetWidthMode(uint8_t mode) {
-    Referee_DrawDataTypeDef *draw = &Referee_DrawData;
-    draw->width_mode = mode;
+void Referee_SendDrawingCmd(graphic_data_struct_t graph[], uint8_t mode) {
+    Referee_RefereeDataTypeDef* referee = &Referee_RefereeData;
+    if (mode == 0 || mode >= 5) return;
+    
+    uint8_t buf[120], cellsize = sizeof(graphic_data_struct_t);
+    if (mode >= 1) {
+        memcpy(buf, graph, cellsize);
+    }
+    if (mode >= 2) {
+        memcpy(buf + cellsize, graph + 1, cellsize);
+    }
+    if (mode >= 3) {
+        memcpy(buf + cellsize * 2, graph + 2, cellsize);
+        memcpy(buf + cellsize * 3, graph + 3, cellsize);
+        memcpy(buf + cellsize * 4, graph + 4, cellsize);
+    }
+    if (mode >= 4) {
+        memcpy(buf + cellsize * 5, graph + 5, cellsize);
+        memcpy(buf + cellsize * 6, graph + 6, cellsize);
+    }
+    
+    Referee_SendInteractiveData(Const_Referee_DATA_CMD_ID_LIST[mode].cmd_id, referee->client_id, 
+                                buf, Const_Referee_DATA_CMD_ID_LIST[mode].data_length);
+}
+
+/**
+  * @brief      客户端自定义图形缓冲区是否为空
+  * @param      无
+  * @retval     1为空，0为非空
+  */
+uint8_t Referee_IsDrawingBufferEmpty() {
+    graphic_data* referee = &graphicData;
+    return referee->graphic_buf_len == 0;
+}
+
+/**
+  * @brief      客户端自定义图形缓冲区刷写函数
+  * @param      无
+  * @retval     无
+  */
+void Referee_DrawingBufferFlush() {
+    graphic_data* referee = &graphicData;
+    if (Referee_IsDrawingBufferEmpty()) return;
+    uint8_t cur = 0;
+    while (cur + 7 < referee->graphic_buf_len) {
+        Referee_SendDrawingCmd(referee->graphic_buf + cur, 4);
+        cur += 7;
+    }
+    uint8_t remain = referee->graphic_buf_len - cur;
+    if (remain > 5) {
+        for (int i = remain; i < 7; ++i)
+            Referee_DrawingBufferPushDummy();
+        Referee_SendDrawingCmd(referee->graphic_buf + cur, 4);
+    }
+    else if (remain > 2) {
+        for (int i = remain; i < 5; ++i)
+            Referee_DrawingBufferPushDummy();
+        Referee_SendDrawingCmd(referee->graphic_buf + cur, 3);
+    }
+    else if (remain == 2) {
+        Referee_SendDrawingCmd(referee->graphic_buf + cur, 2);
+    }
+    else if (remain == 1) {
+        Referee_SendDrawingCmd(referee->graphic_buf + cur, 1);
+    }
+    referee->graphic_buf_len = 0;
+}
+
+/**
+  * @brief      将空图形命令加入客户端自定义图形缓冲区（占位用）
+  * @param      无
+  * @retval     无
+  */
+void Referee_DrawingBufferPushDummy() {
+    graphic_data* referee = &graphicData;
+    memcpy(referee->graphic_buf + referee->graphic_buf_len, &Referee_dummyGraphicCmd, sizeof(graphic_data_struct_t));
+    ++referee->graphic_buf_len;
+}
+
+/**
+  * @brief      将图形命令加入客户端自定义图形缓冲区
+  * @param      pgraph: 指针指向图形命令
+  * @retval     无
+  */
+void Referee_DrawingBufferPush(graphic_data_struct_t *pgraph) {
+    graphic_data* referee = &graphicData;
+    memcpy(referee->graphic_buf + referee->graphic_buf_len, pgraph, sizeof(graphic_data_struct_t));
+    ++referee->graphic_buf_len;
+    if (referee->graphic_buf_len >= 7) {
+        Referee_DrawingBufferFlush();
+    }
+}
+/**
+  * @brief      绘图函数，清空全部
+  * @param      无
+  * @retval     无
+  */
+void Draw_ClearAll() {
+    Referee_RefereeDataTypeDef* referee = &Referee_RefereeData;
+	graphic_data* data = &graphicData;
+    Referee_DrawingBufferFlush();
+    data->graphic_buf_len = 0;   // 直接抛弃缓冲区中的绘图指令
+    uint8_t buf[2];
+    buf[0] = 2;
+    buf[1] = 0;
+    Referee_SendInteractiveData(Const_Referee_DATA_CMD_ID_LIST[0].cmd_id, referee->client_id, 
+                                buf, Const_Referee_DATA_CMD_ID_LIST[0].data_length);
+}
+
+/**
+  * @brief      绘图函数，清空指定图层
+  * @param      layer: 图层号（0~9）
+  * @retval     无
+  */
+void Draw_ClearLayer(uint8_t layer) {
+    Referee_RefereeDataTypeDef* referee = &Referee_RefereeData;
+    Referee_DrawingBufferFlush();
+    uint8_t buf[2];
+    buf[0] = 1;
+    buf[1] = layer;
+    Referee_SendInteractiveData(Const_Referee_DATA_CMD_ID_LIST[0].cmd_id, referee->client_id, 
+                                buf, Const_Referee_DATA_CMD_ID_LIST[0].data_length);
+}
+/**
+  * @brief      打包图形命令
+  * @param      详见协议及头文件定义
+  * @retval     是否合法（1为是，0为否）
+  */
+uint32_t Referee_PackGraphicData(graphic_data_struct_t *pgraph, uint32_t graph_id, 
+                                 Draw_OperateType operate_tpye, Draw_GraphicType figure_tpye, uint8_t layer,
+                                 Draw_Color color, uint16_t start_angle, uint16_t end_angle, 
+                                 uint8_t width, uint16_t start_x, uint16_t start_y,
+                                 uint16_t radius, uint16_t end_x, uint16_t end_y) 
+{
+    if (graph_id > 0xffffff) return PARSE_FAILED;
+    pgraph->figure_name[0] = graph_id & 0xff;
+    pgraph->figure_name[1] = (graph_id >> 8) & 0xff;
+    pgraph->figure_name[2] = (graph_id >> 16) & 0xff;
+    
+    pgraph->operate_tpye = (uint8_t) operate_tpye;
+    pgraph->figure_tpye = (uint8_t) figure_tpye;
+    
+    if (layer > 9) return PARSE_FAILED;
+    pgraph->layer = layer;
+    
+    pgraph->color = (uint8_t) color;
+    
+    if (start_angle > 0x7ff || end_angle > 0x7ff) return PARSE_FAILED;
+    pgraph->details_a = start_angle;
+    pgraph->details_b = end_angle;
+    
+    pgraph->width = width;
+    
+    if (start_x > 0x7ff || start_x > 0x7ff || radius > 0x3ff || end_x > 0x7ff || end_y > 0x7ff) return PARSE_FAILED;
+    pgraph->start_x = start_x;
+    pgraph->start_y = start_y;
+    pgraph->details_c = radius;
+    pgraph->details_d = end_x;
+    pgraph->details_e = end_y;
+    
+    return PARSE_SUCCEEDED;
+}
+/**
+  * @brief      绘图函数，画直线（新增）
+  * @param      详见协议及头文件定义
+  * @retval     无
+  */
+void Draw_AddLine(uint32_t graph_id, uint8_t layer, Draw_Color color, uint8_t width, 
+                  uint16_t start_x, uint16_t start_y, uint16_t end_x, uint16_t end_y) 
+{
+    graphic_data_struct_t graph;
+    if (Referee_PackGraphicData(&graph, graph_id, Draw_OPERATE_ADD, Draw_TYPE_LINE, layer, color, 
+                                0, 0, width, start_x, start_y, 0, end_x, end_y) != PARSE_SUCCEEDED)
+        return;
+    Referee_DrawingBufferPush(&graph);
+}
+/**
+  * @brief      绘图函数，画圆（新增）
+  * @param      详见协议及头文件定义
+  * @retval     无
+  */
+void Draw_AddCircle(uint32_t graph_id, uint8_t layer, Draw_Color color, uint8_t width, 
+                    uint16_t center_x, uint16_t center_y, uint16_t radius) 
+{
+    graphic_data_struct_t graph;
+    if (Referee_PackGraphicData(&graph, graph_id, Draw_OPERATE_ADD, Draw_TYPE_CIRCLE, layer, color, 
+                                0, 0, width, center_x, center_y, radius, 0, 0) != PARSE_SUCCEEDED)
+        return;
+    Referee_DrawingBufferPush(&graph);
 }
 
 
 /**
-  * @brief      设置瞄准线模式
-  * @param      mode: 瞄准线模式（0 ~ 2对应弹速 15,18,30 m/s）
+  * @brief      绘图函数，画圆（修改）
+  * @param      详见协议及头文件定义
   * @retval     无
   */
-void Referee_SetAimMode(uint8_t mode) {
-    Referee_DrawDataTypeDef *draw = &Referee_DrawData;
-    if (mode > 2) return;
-    draw->aim_mode = mode;
+void Draw_ModifyCircle(uint32_t graph_id, uint8_t layer, Draw_Color color, uint8_t width, 
+                       uint16_t center_x, uint16_t center_y, uint16_t radius) 
+{
+    graphic_data_struct_t graph;
+    if (Referee_PackGraphicData(&graph, graph_id, Draw_OPERATE_MODIFY, Draw_TYPE_CIRCLE, layer, color, 
+                                0, 0, width, center_x, center_y, radius, 0, 0) != PARSE_SUCCEEDED)
+        return;
+    Referee_DrawingBufferPush(&graph);
 }
-
-
-/**
-  * @brief      设置电容电量
-  * @param      state: 电容电量（0 ~ 100，单位百分比）
-  * @retval     无
-  */
-void Referee_SetCapState(uint8_t state) {
-    Referee_DrawDataTypeDef *draw = &Referee_DrawData;
-    draw->cap_state = state;
-}
-
-
-/**
-  * @brief      设置Pitch倾角
-  * @param      angle: Pitch倾角
-  * @retval     无
-  */
-void Referee_SetPitchAngle(float angle) {
-    Referee_DrawDataTypeDef *draw = &Referee_DrawData;
-    draw->pitch_angle = angle;
-}
-
-
 /**
   * @brief      瞄准线绘制：初始化阶段
   * @param      无
@@ -183,159 +284,91 @@ void Referee_SetupAimLine() {
 void Referee_UpdateAimLine() {
     // draw_cnt: 4 when mode changed, 0 when mode not change
     Referee_DrawDataTypeDef *draw = &Referee_DrawData;
-    if (draw->aim_mode_last == draw->aim_mode) return;
+	if(draw->aim_mode_last== draw->aim_mode) return;
     draw->aim_mode_last = draw->aim_mode;
     const uint16_t (*aim_lines)[6] = AIM_LINES[draw->aim_mode];
     for (int i = 0; i < AIM_LINE_LINE_NUM; ++i) {
         Draw_AddLine(aim_lines[i][0], AIM_LINE_LAYER, AIM_LINE_COLOR, aim_lines[i][1], aim_lines[i][2], aim_lines[i][3], aim_lines[i][4], aim_lines[i][5]);
+		
     }
 }
 
 
-/**
-  * @brief      准心绘制：初始化阶段
-  * @param      无
-  * @retval     无
-  */
-void Referee_SetupCrosshair() {
-    // draw_cnt: 1
-    Draw_AddCircle(CROSSHAIR[0], CROSSHAIR_LAYER, CROSSHAIR_COLOR, CROSSHAIR[1], CROSSHAIR[2], CROSSHAIR[3], CROSSHAIR[4]);
-}
-
 
 /**
-  * @brief      准心绘制：更新阶段
-  * @param      无
+  * @brief      设置瞄准线模式
+  * @param      mode: 瞄准线模式（0 ~ 2对应弹速 15,18,30 m/s）
   * @retval     无
   */
-void Referee_UpdateCrosshair() {
-    // nothing
-}
-
-
-/**
-  * @brief      车宽线绘制：初始化阶段
-  * @param      无
-  * @retval     无
-  */
-void Referee_SetupWidthMark() {
-    // draw_cnt: 2
+void Referee_SetAimMode(uint8_t mode) {
     Referee_DrawDataTypeDef *draw = &Referee_DrawData;
-    draw->width_mode_last = draw->width_mode;
-    const uint16_t (*mark)[6] = (draw->width_mode == 1) ? WIDTH_MARK_NORMAL : WIDTH_MARK_GYRO;
-    for (int i = 0; i < 2; ++i) {
-        Draw_AddLine(mark[i][0], WIDTH_MARK_LAYER, WIDTH_MARK_COLOR, mark[i][1], mark[i][2], mark[i][3], mark[i][4], mark[i][5]);
-    }
+    if (mode > 2) return;
+    draw->aim_mode = mode;
+}
+
+/*****************************************************文字绘制*********************************************/
+ 
+const uint16_t AIM_MODE_VALUE_TEXT[5]  = {0x501, 60, 15, 763, 250};  //名称，大小，宽度，x，y
+const uint16_t STR_MODE_VALUE_TEXT2[5]  = {0x502, 20, 4, 163, 890};  //名称，大小，宽度，x，y
+const uint8_t AIM_MODE_LAYER        = 2;
+const uint8_t STR_MODE_LAYER        = 3;
+const Draw_Color AIM_MODE_COLOR     = Draw_COLOR_BLACK;
+const Draw_Color STR_MODE_COLOR     = Draw_COLOR_ORANGE;
+const char *AIM_TEXT     = " !?GUGUGAGA?! ";
+const char *STR_TEXT_Shoot1  ="ShootMode:ON";
+const char *STR_TEXT_Shoot2  ="ShootMode:OFF";
+;
+/**
+  * @brief      打包显示字符串图形命令
+  * @param      详见协议及头文件定义
+  * @retval     是否合法（1为是，0为否）
+  */
+uint32_t Referee_PackStringGraphicData(graphic_data_struct_t *pgraph, uint32_t graph_id, 
+                                       Draw_OperateType operate_type, uint8_t layer,
+                                       Draw_Color color, uint16_t font_size, uint8_t length,
+                                       uint8_t width, uint16_t start_x, uint16_t start_y)
+{
+    if (length > Const_Referee_DATA_CMD_ID_LIST[5].data_length - sizeof(graphic_data_struct_t)) return PARSE_FAILED;
+    return Referee_PackGraphicData(pgraph, graph_id, operate_type, Draw_TYPE_STRING, layer, color, font_size, 
+                                   length, width, start_x, start_y, 0, 0, 0);
+}
+/**
+  * @brief      发送客户端自定义图形显示字符串命令
+  * @param      pgraph: 指针指向显示字符串图形命令
+  * @param      str: 字符串（定长为30）
+  * @retval     无
+  */
+void Referee_SendDrawingStringCmd(graphic_data_struct_t *pgraph, const uint8_t str[]) {
+    Referee_RefereeDataTypeDef* referee = &Referee_RefereeData;
+    
+    ext_client_custom_character_t struct_data;
+    memcpy(&struct_data.grapic_data_struct, pgraph, sizeof(graphic_data_struct_t));
+    memcpy(&struct_data.data, str, Const_Referee_DATA_CMD_ID_LIST[5].data_length - sizeof(graphic_data_struct_t));
+    
+    Referee_SendInteractiveData(Const_Referee_DATA_CMD_ID_LIST[5].cmd_id, referee->client_id, 
+                                (void *) &struct_data, Const_Referee_DATA_CMD_ID_LIST[5].data_length);
 }
 
 
 /**
-  * @brief      车宽线绘制：更新阶段
-  * @param      无
+  * @brief      绘图函数，显示字符串（新增）
+  * @param      详见协议及头文件定义
   * @retval     无
   */
-void Referee_UpdateWidthMark() {
-    // draw_cnt: 2 when mode changed, 0 when mode not change
-    Referee_DrawDataTypeDef *draw = &Referee_DrawData;
-    if (draw->width_mode_last == draw->width_mode) return;
-    draw->width_mode_last = draw->width_mode;
-    const uint16_t (*mark)[6] = (draw->width_mode == 1) ? WIDTH_MARK_NORMAL : WIDTH_MARK_GYRO;
-    for (int i = 0; i < 2; ++i) {
-        Draw_ModifyLine(mark[i][0], WIDTH_MARK_LAYER, WIDTH_MARK_COLOR, mark[i][1], mark[i][2], mark[i][3], mark[i][4], mark[i][5]);
-    }
-}
-
-
-/**
-  * @brief      电容状态绘制：初始化阶段
-  * @param      无
-  * @retval     无
-  */
-void Referee_SetupCapState() {
-    // draw_cnt: 2
-    Referee_DrawDataTypeDef *draw = &Referee_DrawData;
-    
-    Draw_AddCircle(CAP_STATE_CIRCLE, CAP_STATE_LAYER[1], CAP_STATE_COLOR[0], CAP_STATE[0], CAP_STATE[1], CAP_STATE[2], CAP_STATE[3]);
-    
-    int value = draw->cap_state;
-    value = (int) (-draw->pitch_angle + 10) * 2;
-    
-    Draw_Color color;
-    if (value > 100)
+void Draw_String(Draw_OperateType operate_type,uint32_t graph_id, uint8_t layer, Draw_Color color, uint16_t font_size, 
+                    uint8_t width, uint16_t start_x, uint16_t start_y, const char str[])  
+{
+	 Referee_DrawingBufferFlush(); 
+    graphic_data_struct_t graph;
+    uint8_t len = strlen(str);
+    if (Referee_PackStringGraphicData(&graph, graph_id, operate_type, layer, color, 
+                                      font_size, len, width, start_x, start_y) != PARSE_SUCCEEDED)
         return;
-    else if (value >= 50) 
-        color = CAP_STATE_COLOR[2];
-    else if (value >= 20)
-        color = CAP_STATE_COLOR[3];
-    else
-        color = CAP_STATE_COLOR[4];
-    
-    uint16_t start_angle = 0;
-    uint16_t end_angle = 0;
-    if (value > 0 && value <= 100)
-        end_angle = (uint16_t) (360.0 * value / 100.0);
-    
-    Draw_AddArc(CAP_STATE_ARC, CAP_STATE_LAYER[0], color, start_angle, end_angle, CAP_STATE[0], CAP_STATE[1], CAP_STATE[2], CAP_STATE[3], CAP_STATE[3]);
+    uint8_t buf[35];
+	memset(buf, 0, sizeof(buf)); 
+    memcpy(buf, str, len);
+    Referee_SendDrawingStringCmd(&graph, buf);
 }
-
-
-/**
-  * @brief      电容状态绘制：更新阶段
-  * @param      无
-  * @retval     无
-  */
-void Referee_UpdateCapState() {
-    // draw_cnt: 1
-    Referee_DrawDataTypeDef *draw = &Referee_DrawData;
-
-    int value = draw->cap_state;
-//    value = (int) (-draw->pitch_angle + 10) * 2;
-    
-    Draw_Color color;
-    if (value > 100)
-        return;
-    else if (value >= 50) 
-        color = CAP_STATE_COLOR[2];
-    else if (value >= 20)
-        color = CAP_STATE_COLOR[3];
-    else
-        color = CAP_STATE_COLOR[4];
-    
-    uint16_t start_angle = 0;
-    uint16_t end_angle = 1;
-    if (value > 0 && value <= 100)
-        end_angle = (uint16_t) (360.0f * value / 100.0f);
-    
-    Draw_ModifyArc(CAP_STATE_ARC, CAP_STATE_LAYER[0], color, start_angle, end_angle, CAP_STATE[0], CAP_STATE[1], CAP_STATE[2], CAP_STATE[3], CAP_STATE[3]);
-}
-
-
-/**
-  * @brief      Pitch倾角计绘制：初始化阶段
-  * @param      无
-  * @retval     无
-  */
-void Referee_SetupPitchMeter() {
-    // draw_cnt: 1
-    Referee_DrawDataTypeDef *draw = &Referee_DrawData;
-    float value = -draw->pitch_angle;
-    Draw_AddFloat(PITCH_METER_VALUE[0], PITCH_METER_LAYER, PITCH_METER_COLOR, PITCH_METER_VALUE[1], PITCH_METER_VALUE[2], PITCH_METER_VALUE[3], PITCH_METER_VALUE[4], PITCH_METER_VALUE[5], value);
-}
-
-
-/**
-  * @brief      Pitch倾角计绘制：更新阶段
-  * @param      无
-  * @retval     无
-  */
-void Referee_UpdatePitchMeter() {
-    // draw_cnt: 1
-    Referee_DrawDataTypeDef *draw = &Referee_DrawData;
-    float value = -draw->pitch_angle;
-    Draw_ModifyFloat(PITCH_METER_VALUE[0], PITCH_METER_LAYER, PITCH_METER_COLOR, PITCH_METER_VALUE[1], PITCH_METER_VALUE[2], PITCH_METER_VALUE[3], PITCH_METER_VALUE[4], PITCH_METER_VALUE[5], value);
-    //Draw_ModifyInt(PITCH_METER_VALUE[0], PITCH_METER_LAYER, PITCH_METER_COLOR, PITCH_METER_VALUE[1], PITCH_METER_VALUE[3], PITCH_METER_VALUE[4], PITCH_METER_VALUE[5], (int32_t) (value * 1000));
-}
-
 
 /**
   * @brief      设置底盘和自瞄模式
@@ -343,15 +376,11 @@ void Referee_UpdatePitchMeter() {
   * @param      cha_mode: 底盘模式 （0 ~ 1对应 正常底盘运动 、 小陀螺模式）
   * @retval     无
   */
-void Referee_SetMode(uint8_t auto_aim_mode, uint8_t cha_mode) {
+void Referee_SetMode(uint8_t auto_aim_mode) {
     Referee_DrawDataTypeDef *draw = &Referee_DrawData;
     if (auto_aim_mode <= 3)
         draw->auto_aim_mode = auto_aim_mode;
-    if (cha_mode <= 1)
-        draw->cha_mode = cha_mode;
 }
-
-
 /**
   * @brief      模式显示绘制：初始化阶段
   * @param      无
@@ -360,13 +389,9 @@ void Referee_SetMode(uint8_t auto_aim_mode, uint8_t cha_mode) {
 void Referee_SetupModeDisplay() {
     Referee_DrawDataTypeDef *draw = &Referee_DrawData;
     draw->auto_aim_mode_last = draw->auto_aim_mode;
-    draw->cha_mode_last = draw->cha_mode;
-    
-    Draw_AddString(AIM_MODE_VALUE_TEXT[0], AIM_MODE_LAYER, AIM_MODE_COLOR, AIM_MODE_VALUE_TEXT[1], AIM_MODE_VALUE_TEXT[2], AIM_MODE_VALUE_TEXT[3], AIM_MODE_VALUE_TEXT[4], NORMAL_AIM_TEXT_STR);    
-    Draw_AddString(CHASSIS_MODE_VALUE_TEXT[0], CHASSIS_MODE_LAYER, CHASSIS_MODE_COLOR, CHASSIS_MODE_VALUE_TEXT[1], CHASSIS_MODE_VALUE_TEXT[2], CHASSIS_MODE_VALUE_TEXT[3], CHASSIS_MODE_VALUE_TEXT[4], NORMAL_RUN_TEXT_STR);
+    Draw_String(Draw_OPERATE_ADD,STR_MODE_VALUE_TEXT2[0], STR_MODE_LAYER, STR_MODE_COLOR, STR_MODE_VALUE_TEXT2[1], 
+	STR_MODE_VALUE_TEXT2[2], STR_MODE_VALUE_TEXT2[3], STR_MODE_VALUE_TEXT2[4], STR_TEXT_Shoot1);        
 }
-
-
 /**
   * @brief      模式显示绘制：更新阶段
   * @param      无
@@ -374,134 +399,77 @@ void Referee_SetupModeDisplay() {
   */
 void Referee_UpdateModeDisplay() {
     Referee_DrawDataTypeDef *draw = &Referee_DrawData;
-    if (draw->auto_aim_mode_last != draw->auto_aim_mode) {
-        draw->auto_aim_mode_last = draw->auto_aim_mode;
+	 if(count_cqie == 1){
+		 Referee_DrawingBufferFlush();
         switch (draw->auto_aim_mode) {
             case 0:
-                Draw_AddString(AIM_MODE_VALUE_TEXT[0], AIM_MODE_LAYER, AIM_MODE_COLOR, AIM_MODE_VALUE_TEXT[1], AIM_MODE_VALUE_TEXT[2], AIM_MODE_VALUE_TEXT[3], AIM_MODE_VALUE_TEXT[4], NORMAL_AIM_TEXT_STR);      
-                break;
-            case 1:
-                Draw_AddString(AIM_MODE_VALUE_TEXT[0], AIM_MODE_LAYER, AIM_MODE_COLOR, AIM_MODE_VALUE_TEXT[1], AIM_MODE_VALUE_TEXT[2], AIM_MODE_VALUE_TEXT[3], AIM_MODE_VALUE_TEXT[4], ARMOR_AIM_TEXT_STR);
-                break;
-            case 2:
-                Draw_AddString(AIM_MODE_VALUE_TEXT[0], AIM_MODE_LAYER, AIM_MODE_COLOR, AIM_MODE_VALUE_TEXT[1], AIM_MODE_VALUE_TEXT[2], AIM_MODE_VALUE_TEXT[3], AIM_MODE_VALUE_TEXT[4], BIG_BUFF_AIM_TEXT_STR);
-                break;
-            case 3:
-                Draw_AddString(AIM_MODE_VALUE_TEXT[0], AIM_MODE_LAYER, AIM_MODE_COLOR, AIM_MODE_VALUE_TEXT[1], AIM_MODE_VALUE_TEXT[2], AIM_MODE_VALUE_TEXT[3], AIM_MODE_VALUE_TEXT[4], SMALL_BUFF_AIM_TEXT_STR);
+                Draw_String(Draw_OPERATE_ADD,AIM_MODE_VALUE_TEXT[0], AIM_MODE_LAYER, AIM_MODE_COLOR, AIM_MODE_VALUE_TEXT[1], AIM_MODE_VALUE_TEXT[2], AIM_MODE_VALUE_TEXT[3], AIM_MODE_VALUE_TEXT[4], AIM_TEXT);      
                 break;
             default:
                 break;    
         }
+    }else{Draw_ClearLayer(2) ; }
+	
+}
+void Referee_MaintainDisplay() {
+    static uint8_t q_mode_last = 0xFF; 
+    if (q_mode == q_mode_last) {
+        return;
     }
+    q_mode_last = q_mode;
 
-    if (draw->cha_mode_last != draw->cha_mode) {
-        draw->cha_mode_last = draw->cha_mode;
-        switch (draw->cha_mode) {
-            case 0:
-                Draw_AddString(CHASSIS_MODE_VALUE_TEXT[0], CHASSIS_MODE_LAYER, CHASSIS_MODE_COLOR, CHASSIS_MODE_VALUE_TEXT[1], CHASSIS_MODE_VALUE_TEXT[2], CHASSIS_MODE_VALUE_TEXT[3], CHASSIS_MODE_VALUE_TEXT[4], NORMAL_RUN_TEXT_STR);            
-                break;
-            case 1:
-                Draw_AddString(CHASSIS_MODE_VALUE_TEXT[0], CHASSIS_MODE_LAYER, CHASSIS_MODE_COLOR, CHASSIS_MODE_VALUE_TEXT[1], CHASSIS_MODE_VALUE_TEXT[2], CHASSIS_MODE_VALUE_TEXT[3], CHASSIS_MODE_VALUE_TEXT[4], GYRO_RUN_TEXT_STR);
-                break;
-            default:
-                break;
-        }
+    // 2. 既然都要刷新，直接提出来执行一次即可
+    Referee_DrawingBufferFlush(); 
+
+    // 3. 使用 switch 规整分支
+    switch (q_mode) {
+        case 1:
+            Draw_String(Draw_OPERATE_MODIFY, STR_MODE_VALUE_TEXT2[0], STR_MODE_LAYER, 
+                        STR_MODE_COLOR, STR_MODE_VALUE_TEXT2[1], STR_MODE_VALUE_TEXT2[2], 
+                        STR_MODE_VALUE_TEXT2[3], STR_MODE_VALUE_TEXT2[4], STR_TEXT_Shoot1);
+            break;
+
+        case 0:
+            Draw_String(Draw_OPERATE_MODIFY, STR_MODE_VALUE_TEXT2[0], STR_MODE_LAYER, 
+                        STR_MODE_COLOR, STR_MODE_VALUE_TEXT2[1], STR_MODE_VALUE_TEXT2[2], 
+                        STR_MODE_VALUE_TEXT2[3], STR_MODE_VALUE_TEXT2[4], STR_TEXT_Shoot2);
+            break;
+
+
+
+        default:
+            // 防止出现未定义的 q_mode 导致状态错乱
+            break;
     }
 }
-
-
-/**
-  * @brief      错误显示绘制：初始化阶段
-  * @param      无
-  * @retval     无
-  */
-void Referee_SetupErrorDisplay() {
-    
-}
-
-
-/**
-  * @brief      错误显示绘制：更新阶段
-  * @param      无
-  * @retval     无
-  */
-void Referee_UpdateErrorDisplay() {
-    
-}
-
-
-/**
-  * @brief      各功能初始化阶段文字绘制
-  * @param      无
-  * @retval     无
-  */
-void Referee_SetupAllString() {
-    // cmd_cnt: 2
-    //Referee_RefereeDataTypeDef *Referee = &Referee_DrawData;
-    
-    Draw_AddString(CAP_STATE_TEXT[0], CAP_STATE_LAYER[1], CAP_STATE_COLOR[1], CAP_STATE_TEXT[1], CAP_STATE_TEXT[2], CAP_STATE_TEXT[3], CAP_STATE_TEXT[4], CAP_STATE_TEXT_STR);
-    Draw_AddString(PITCH_METER_TEXT[0], PITCH_METER_LAYER, PITCH_METER_COLOR, PITCH_METER_TEXT[1], PITCH_METER_TEXT[2], PITCH_METER_TEXT[3], PITCH_METER_TEXT[4], PITCH_METER_TEXT_STR);
-
-    Draw_AddString(AIM_MODE_TEXT[0], AIM_MODE_LAYER, AIM_MODE_COLOR, AIM_MODE_TEXT[1], AIM_MODE_TEXT[2], AIM_MODE_TEXT[3], AIM_MODE_TEXT[4], AIM_MODE_TEXT_STR);
-    Draw_AddString(CHASSIS_MODE_TEXT[0], CHASSIS_MODE_LAYER, CHASSIS_MODE_COLOR, CHASSIS_MODE_TEXT[1], CHASSIS_MODE_TEXT[2], CHASSIS_MODE_TEXT[3], CHASSIS_MODE_TEXT[4], CHASSIS_MODE_TEXT_STR);
-}
-
-uint8_t syj = 0;
-
+/*********************************************文字绘制结束*****************************************************************/
 /**
   * @brief      初始化各绘制功能
   * @param      无
   * @retval     无
   */
 void Referee_Setup() {     
-    static int last_time = -1000;
-    int now = HAL_GetTick();
-    if (now - last_time < 1000) return;
-    last_time = now;    
-    
-	/// syj
 
-	
-	if (!syj) {
-		Draw_ClearAll();                    // cmd_cnt: 1, total_cmd_cnt: 1
-		Referee_SetupAimLine();            // draw_cnt: 4
-		Referee_SetupCrosshair();          // draw_cnt: 1
-		syj++;
-	}
-	else if (syj == 1) {
-		Referee_SetupWidthMark();          // draw_cnt: 2, send(7), total_cmd_cnt: 2
-		Referee_SetupCapState();           // draw_cnt: 2
-		Referee_SetupPitchMeter();         // draw_cnt: 1
-		syj++;
-	}
-	else if (syj == 2) {
-		// Referee_SetupModeDisplay();        // draw_cnt: 2
-		// Referee_SetupErrorDisplay();       // draw_cnt: 0, send(2)send(1), total_cmd_cnt: 4
-		syj++;
-	}
-	else if (syj >= 3) {
-		//Referee_SetupAllString();          // cmd_cnt: 2, total_cmd_cnt: 6
-		syj = 0;
-	}
-    Referee_DrawingBufferFlush();       // useless since string cmd sent previously
-    referee_setup_flag = 1;
+	Referee_SetAimMode(2);
+	Referee_SetMode(0);
+  
+//	Draw_ClearAll();                    // cmd_cnt: 1, total_cmd_cnt: 1
+	Referee_SetupAimLine();            // draw_cnt: 4
+	Referee_DrawingBufferFlush();
+	HAL_Delay(30);
+	Referee_SetupModeDisplay();
 }
 
+void Referee_Update() {  
 
-/**
-  * @brief      更新各绘制功能
-  * @param      无
-  * @retval     无
-  */
-void Referee_Update() {                
-    Referee_UpdateAimLine();           // draw_cnt: if bullet speed changed 4, else 0
-    Referee_UpdateCrosshair();         // draw_cnt: 0
-    Referee_UpdateWidthMark();         // draw_cnt: if gyro mode changed 2, else 0
-    Referee_UpdateCapState();          // draw_cnt: 1
-    Referee_UpdatePitchMeter();        // draw_cnt: 1
-    Referee_UpdateModeDisplay();       // draw_cnt: 0
-    Referee_UpdateErrorDisplay();      // draw_cnt: 0
-    
-    Referee_DrawingBufferFlush();       // max draw_cnt: 8, cmd_cnt:2
-                                        // min draw_cnt: 2, cmd_cnt:1
+	 Referee_UpdateAimLine();
+ //   Draw_ClearAll()	;
+	
+        Referee_MaintainDisplay(); 
+   
+        Referee_UpdateModeDisplay();
+ 
+
+	
+    Referee_DrawingBufferFlush();         
 }

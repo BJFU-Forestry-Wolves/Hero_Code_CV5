@@ -15,6 +15,7 @@
 #include "stdlib.h"
 
 #include "alg_power_limit.h"
+#include "module_supercap.h"
 /********** VOLATILE USER CODE **********/
 
 const uint32_t Const_Motor_MOTOR_OFFLINE_TIME = 200;
@@ -27,6 +28,7 @@ Motor_MotorGroupTypeDef *Motor_groupHandle[MOTOR_GROUP_NUM];
 Motor_MotorGroupTypeDef Motor_ChassisMotors;
 Motor_MotorGroupTypeDef Motor_PitchMotors;        
 Motor_MotorGroupTypeDef Motor_ShootMotors;
+//Motor_MotorGroupTypeDef Motor_FeedMotors;
 
 Motor_MotorTypeDef Motor_ChassisFontRightMotor;
 Motor_MotorTypeDef Motor_ChassisFontLeftMotor;
@@ -48,6 +50,10 @@ Motor_MotorTypeDef Motor_FeedMotor;
   */
 void Motor_EncoderDecodeCallback(CAN_HandleTypeDef* phcan, uint32_t stdid, uint8_t rxdata[], uint32_t len) 
 	{
+		if (stdid == 0x211) {
+        Parse_SuperCap_Feedback(rxdata,&SuperCap);
+    }
+		
     for (int i = 0; i < MOTOR_GROUP_NUM; i++) 
 		{
         for (int j = 0; j < Motor_groupHandle[i]->motor_num; j++) 
@@ -72,6 +78,11 @@ void Motor_EncoderDecodeCallback(CAN_HandleTypeDef* phcan, uint32_t stdid, uint8
   * @retval     NULL
   */
 void Motor_InitAllMotors() {
+//		Motor_groupHandle[0] = &Motor_FeedMotors;
+//		Motor_InitMotorGroup(&Motor_FeedMotors, Motor_TYPE_RM3508, 1, &hcan1, 0x1FF);
+//		Motor_InitMotor(&Motor_FeedMotor, Motor_TYPE_RM3508, 0X207, 0.1, Hero_FeedMotor_rm3508_encoder_callback);// 初始化供弹电机
+//		Motor_PitchMotors.motor_handle[0] = &Motor_FeedMotor;				//	将拨弹电机句柄赋值给电机组
+	
 		// 初始化俯仰电机组，注意：英雄机械结构特殊，拨弹电机需要挂在CAN1上
     Motor_groupHandle[0] = &Motor_PitchMotors;
     Motor_InitMotorGroup(&Motor_PitchMotors, Motor_TYPE_RM6020, 3, &hcan1, 0x1FF); // 初始化电机组，包含两个电机，使用 CAN 总线 1，ID 为 0x1FF

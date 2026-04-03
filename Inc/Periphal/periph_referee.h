@@ -21,215 +21,110 @@ extern "C" {
 #include "string.h"
 
 extern UART_HandleTypeDef* Const_Referee_UART_HANDLER;
-
+extern const uint8_t PARSE_FAILED, PARSE_SUCCEEDED;
 /********** START OF REFEREE CMD STRUCT DEFINITION **********/
 
-typedef struct __attribute__((packed)) {
+typedef __packed struct {
     uint8_t game_type : 4;
     uint8_t game_progress : 4;
     uint16_t stage_remain_time;
+	uint64_t SyncTimeStamp; 
 } ext_game_status_t;
 
-typedef struct __attribute__((packed)) {
+typedef __packed struct {
     uint8_t winner;
 } ext_game_result_t;
 
-typedef struct __attribute__((packed)) {
-    uint16_t red_1_robot_HP;
-    uint16_t red_2_robot_HP;
-    uint16_t red_3_robot_HP;
-    uint16_t red_4_robot_HP;
-    uint16_t red_5_robot_HP;
-    uint16_t red_7_robot_HP;
-    uint16_t red_outpost_HP;
-    uint16_t red_base_HP;
-    uint16_t blue_1_robot_HP;
-    uint16_t blue_2_robot_HP;
-    uint16_t blue_3_robot_HP;
-    uint16_t blue_4_robot_HP;
-    uint16_t blue_5_robot_HP;
-    uint16_t blue_7_robot_HP;
-    uint16_t blue_outpost_HP;
-    uint16_t blue_base_HP;
+typedef __packed struct {
+    uint16_t ally_1_robot_HP; //1号英雄 
+    uint16_t ally_2_robot_HP;  
+    uint16_t ally_3_robot_HP; //3号步兵 
+    uint16_t ally_4_robot_HP;  
+    uint16_t reserved;  
+    uint16_t ally_7_robot_HP; //7号哨
+    uint16_t ally_outpost_HP;  //
+    uint16_t ally_base_HP; 
 } ext_game_robot_HP_t;
 
-typedef struct __attribute__((packed)) { 
-    uint8_t dart_belong; 
-    uint16_t stage_remaining_time; 
-} ext_dart_status_t;
+typedef __packed struct { 
+  uint8_t level; 
+  uint8_t offending_robot_id; 
+  uint8_t count; 
+}ext_referee_warning_t;      //裁判系统警告
 
-typedef struct __attribute__((packed)) { 
-    uint8_t F1_zone_status:1;
-    uint8_t F1_zone_buff_debuff_status:3;
-    uint8_t F2_zone_status:1;
-    uint8_t F2_zone_buff_debuff_status:3;
-    uint8_t F3_zone_status:1;
-    uint8_t F3_zone_buff_debuff_status:3;
-    uint8_t F4_zone_status:1;
-    uint8_t F4_zone_buff_debuff_status:3;
-    uint8_t F5_zone_status:1;
-    uint8_t F5_zone_buff_debuff_status:3;
-    uint8_t F6_zone_status:1;
-    uint8_t F6_zone_buff_debuff_status:3;
-} ext_ICRA_buff_debuff_zone_status_t;
 
-typedef struct __attribute__((packed)) {
+typedef __packed struct {
     uint32_t event_type;
 } ext_event_data_t;
 
-typedef struct __attribute__((packed)) {
+typedef __packed struct {
     uint8_t supply_projectile_id; 
     uint8_t supply_robot_id; 
     uint8_t supply_projectile_step;
     uint8_t supply_projectile_num;
 } ext_supply_projectile_action_t;
 
-typedef struct __attribute__((packed)) {
-    uint8_t level;
-    uint8_t foul_robot_id;
-} ext_referee_warning_t;
 
-typedef struct __attribute__((packed)) {
+typedef __packed struct {
     uint8_t dart_remaining_time;
 } ext_dart_remaining_time_t;
 
-/* （obsolete）
-typedef struct __attribute__((packed)) {
-    uint8_t supply_projectile_id; 
-    uint8_t supply_robot_id;
-    uint8_t supply_num;
-} ext_supply_projectile_booking_t;
-*/
 
-typedef struct __attribute__((packed)) { 
+typedef __packed struct { 
     uint8_t robot_id;
     uint8_t robot_level;
-    uint16_t remain_HP;
-    uint16_t max_HP;
-    uint16_t shooter_id1_17mm_cooling_rate;
-    uint16_t shooter_id1_17mm_cooling_limit;
-    uint16_t shooter_id1_17mm_speed_limit;
-    uint16_t shooter_id2_17mm_cooling_rate;
-    uint16_t shooter_id2_17mm_cooling_limit;
-    uint16_t shooter_id2_17mm_speed_limit;
-    uint16_t shooter_id1_42mm_cooling_rate;
-    uint16_t shooter_id1_42mm_cooling_limit;
-    uint16_t shooter_id1_42mm_speed_limit;
-    uint16_t chassis_power_limit;
-    uint8_t mains_power_gimbal_output : 1;
-    uint8_t mains_power_chassis_output : 1;
-    uint8_t mains_power_shooter_output : 1;
+    uint16_t current_HP;
+    uint16_t maximum_HP;
+    uint16_t shooter_barrel_cooling_value; //机器人射击热量每秒冷却值
+    uint16_t shooter_barrel_heat_limit;  //机器人射击热量上限
+    uint16_t chassis_power_limit;        //机器人底盘功率上限 
+    uint8_t power_management_gimbal_output : 1; 
+    uint8_t power_management_chassis_output : 1;  
+    uint8_t power_management_shooter_output : 1; 
 } ext_game_robot_status_t;
 
-
-typedef struct {
-    uint16_t chass_power;
-	  float init_speed;
-		uint8_t robot_id;
-
-}lqw_bref_data;
-
-
-typedef struct __attribute__((packed)) {
-    uint16_t chassis_volt; 
-    uint16_t chassis_current; 
-    float chassis_power;
-    uint16_t chassis_power_buffer; 
-    uint16_t shooter_heat0; 
-    uint16_t shooter_heat1;
-    uint16_t mobile_shooter_heat2;
+typedef __packed struct {
+    uint16_t buffer_energy;            //缓存能量
+    uint16_t shooter_17mm_barrel_heat; //当前热量
 } ext_power_heat_data_t;
 
-typedef struct __attribute__((packed)) {
+typedef __packed struct {
     float x; 
     float y; 
-    float z; 
-    float yaw;
+    float angle;                        //本机器人测速模块的朝向
 } ext_game_robot_pos_t;
 
-typedef struct __attribute__((packed)) {
-    uint8_t power_rune_buff;
-} ext_buff_t;
 
-typedef struct __attribute__((packed)) {
-    uint8_t energy_point; 
-    uint8_t attack_time;
-} aerial_robot_energy_t;
-
-typedef struct __attribute__((packed)) {
+typedef __packed struct {
     uint8_t armor_id : 4; 
-    uint8_t hurt_type : 4;
-} ext_robot_hurt_t;
+    uint8_t HP_deduction_reason : 4;
+} ext_robot_hurt_t;                   //是谁打了我
 
-typedef struct __attribute__((packed)) {
-    uint8_t bullet_type; 
-    uint8_t bullet_freq; 
-    float bullet_speed;
-} ext_shoot_data_t;
+typedef __packed struct {
+   uint8_t bullet_type;  
+  uint8_t shooter_number; 
+  uint8_t launching_frequency;  
+  float initial_speed; 
+} ext_shoot_data_t;                   //实时射击数据
 
-typedef struct __attribute__((packed)) {
-    uint16_t bullet_remaining_num;
-} ext_bullet_remaining_t;
 
-typedef struct __attribute__((packed)) { 
-    uint32_t rfid_status;
-} ext_rfid_status_t;
-
-// ------------------------------
-
-typedef struct __attribute__((packed)) {
+typedef __packed struct {
     uint16_t data_cmd_id; 
     uint16_t sender_ID; 
     uint16_t receiver_ID;
-} ext_student_interactive_header_data_t;
+} robot_interaction_data_t;
 
-//typedef struct __attribute__((packed)) {
-//    uint8_t data[];
-//} robot_interactive_data_t;
 
-typedef struct __attribute__((packed)) { 
+typedef __packed struct { 
     uint8_t operate_type; 
     uint8_t layer; 
 } ext_client_custom_graphic_delete_t;
 
-typedef struct __attribute__((packed)) {
-    uint8_t graphic_name[3]; 
-    uint32_t operate_type:3; 
-    uint32_t graphic_type:3; 
-    uint32_t layer:4; 
-    uint32_t color:4; 
-    uint32_t start_angle:9; 
-    uint32_t end_angle:9; 
-    uint32_t width:10; 
-    uint32_t start_x:11; 
-    uint32_t start_y:11; 
-    uint32_t radius:10; 
-    uint32_t end_x:11; 
-    uint32_t end_y:11;
-} graphic_data_struct_t;
 
-typedef struct __attribute__((packed)) { 
-    graphic_data_struct_t grapic_data_struct; 
-} ext_client_custom_graphic_single_t;
 
-typedef struct __attribute__((packed)) { 
-    graphic_data_struct_t grapic_data_struct[2]; 
-} ext_client_custom_graphic_double_t;
 
-typedef struct __attribute__((packed)) { 
-    graphic_data_struct_t grapic_data_struct[5]; 
-} ext_client_custom_graphic_five_t;
 
-typedef struct __attribute__((packed)) { 
-    graphic_data_struct_t grapic_data_struct[7]; 
-} ext_client_custom_graphic_seven_t;
-
-typedef struct __attribute__((packed)) { 
-    graphic_data_struct_t grapic_data_struct; 
-    uint8_t data[30]; 
-} ext_client_custom_character_t;
-
-typedef struct __attribute__((packed)) { 
+typedef __packed struct { 
     uint8_t dart_launch_opening_status;
     uint8_t dart_attack_target;
     uint16_t target_change_time;
@@ -256,14 +151,7 @@ typedef struct {
     Referee_RefereeStateEnum state;             // 裁判系统当前状态
     uint32_t last_update_time;                  // 裁判系统上次更新时间
     
-    uint16_t client_id;                         // 客户端ID
-//  client_custom_data_t custom_data;           // （已废弃）客户端自定义数据
-//  ext_client_graphic_draw_t graphic_draw;     // （已废弃）客户端自定义绘图
-    
-    graphic_data_struct_t graphic_buf[30];      // 客户端自定义绘图缓冲区
-    uint8_t graphic_buf_len;                    // 客户端自定义绘图缓冲区已占用长度
-//  uint32_t graphic_current_id;                // 客户端自定义绘图当前序号
-    
+    uint16_t client_id;                         // 客户端ID   
 	uint8_t game_type;                        //  游戏类型,    1:RoboMaster 机甲大师赛；
 	                                            //              2:RoboMaster 机甲大师单项赛；
                                                 //      	    3：ICRA RoboMaster 人工智能挑战赛
@@ -275,52 +163,45 @@ typedef struct {
                                                 //              3：5s倒计时；
                                                 //              4：对战中；
                                                 //              5：比赛结算中
-    uint16_t stage_remain_time;                 //  当前阶段剩余时间，单位s
-    
-    uint32_t event_type;                        
-    
+    uint16_t stage_remain_time;                 
+    uint64_t SyncTimeStamp;                    
+	uint8_t winner;                             //谁赢了0平局，1红胜，2蓝胜
+	struct {
+        uint16_t  Hero_HP;  //Channel 0 channel 1 channel 2 channel 3 paddle wheel
+        uint16_t  Sentinel_HP;   //Switch 0 switch 1
+    } Teammate_HP;                      
+    struct {
+        uint8_t  level;  //判罚等级
+        uint8_t  offending_robot_id;//哪个蠢蛋被判罚了
+		uint8_t  count;  //判罚次数
+    } waring;
+	struct{
     uint8_t robot_id;
     uint8_t robot_level; 
-    uint16_t remain_HP; 
-    uint8_t max_chassis_power;
-    uint8_t mains_power_gimbal_output; 
-    uint8_t mains_power_chassis_output; 
-    uint8_t mains_power_shooter_output;
-    
-    uint16_t chassis_volt; 
-    uint16_t chassis_current; 
-    float chassis_power;
-    uint16_t chassis_power_buffer; 
-    uint16_t shooter_heat0; 
-    uint16_t shooter_heat1;
-    uint16_t shooter_heat0_cooling_rate;
-    uint16_t shooter_heat1_cooling_rate;
-    uint16_t shooter_heat0_cooling_limit;
-    uint16_t shooter_heat1_cooling_limit;
-    uint16_t shooter_heat0_speed_limit;
-    uint16_t shooter_heat1_speed_limit;    
-    uint16_t mobile_shooter_heat2;
-    
+    uint16_t current_HP; 
+	uint16_t shooter_limit;                      //热量上限
+    uint8_t max_chassis_power;                  //底盘功率上限
+    uint8_t mains_power_gimbal_output;          //云台是否有输出
+    uint8_t mains_power_chassis_output;         //底盘是否有输出
+    uint8_t mains_power_shooter_output;         //发射是否有输出
+    uint16_t buffer_energy;                      //当前底盘缓存能量
+    uint16_t shoot_heat;                         //当前射击热量
+    }status ;
     float x; 
     float y; 
-    float z; 
-    float yaw;
+    float angle;
     
-    uint8_t power_rune_buff;
-    
-    uint8_t  dart_launch_opening_status;
-    uint8_t  dart_attack_target;
-    uint16_t target_change_time;
-    uint8_t  first_dart_speed;
-    uint8_t  second_dart_speed;
-    uint8_t  third_dart_speed;
-    uint8_t  fourth_dart_speed;
-    uint16_t last_dart_launch_time;
-    uint16_t operate_launch_cmd_time;
-    
-		uint8_t bullet_type; 
-    uint8_t bullet_freq; 
-    float bullet_speed;
+	struct {
+        uint8_t  armor_id:4;  
+        uint8_t  HP_deduction_reason:4;
+    } who_shoot_me;
+      
+	struct {
+        uint8_t  type;                         //子弹类型
+        uint8_t  number;                       //子弹发射机构？SBdJ写的什么东西
+		uint8_t	 frequency;                    //弹丸射速
+		uint8_t  speed ;                       //弹丸初速度
+    } what_can_I_shoot;
 		
 } Referee_RefereeDataTypeDef;
 
@@ -348,35 +229,7 @@ typedef union {
     int32_t int_data;
 } Referee_GraphicDataConverterUnion;
 
-typedef enum {
-    Draw_OPERATE_NULL   = 0,    // 空操作
-    Draw_OPERATE_ADD    = 1,    // 增加
-    Draw_OPERATE_MODIFY = 2,    // 修改
-    Draw_OPERATE_DELETE = 3     // 删除
-} Draw_OperateType;             // 图形操作
 
-typedef enum {
-    Draw_TYPE_LINE      = 0,    // 直线
-    Draw_TYPE_RECTANGLE = 1,    // 矩形
-    Draw_TYPE_CIRCLE    = 2,    // 整圆
-    Draw_TYPE_ELLIPSE   = 3,    // 椭圆
-    Draw_TYPE_ARC       = 4,    // 圆弧
-    Draw_TYPE_FLOAT     = 6,    // 浮点数
-    Draw_TYPE_INT       = 5,    // 整型数
-    Draw_TYPE_STRING    = 7     // 字符
-} Draw_GraphicType;             // 图形类型
-
-typedef enum {
-    Draw_COLOR_RED_BLUE  = 0,   // 红蓝主色
-    Draw_COLOR_YELLOW    = 1,   // 黄色
-    Draw_COLOR_GREEN     = 2,   // 绿色
-    Draw_COLOR_ORANGE    = 3,   // 橙色
-    Draw_COLOR_VIOLET    = 4,   // 紫红色
-    Draw_COLOR_PINK      = 5,   // 粉色
-    Draw_COLOR_CYAN      = 6,   // 青色
-    Draw_COLOR_BLACK     = 7,   // 黑色
-    Draw_COLOR_WHITE     = 8    // 白色
-} Draw_Color;                   // 颜色
 
 
 extern const uint16_t Const_Referee_RX_BUFF_LEN;
@@ -392,77 +245,12 @@ void Referee_InitReferee(void);
 uint16_t Referee_GetClientIDByRobotID(uint8_t robot_id);
 void Referee_SendInteractiveData(uint16_t data_cmd_id, uint16_t receiver_ID, const uint8_t *interactive_data, uint16_t interactive_data_length);
 void Referee_SendRobotCustomData(uint16_t data_cmd_id, uint16_t receiver_ID, const uint8_t *data, uint16_t data_length);
-void Referee_SendDrawingCmd(graphic_data_struct_t graph[], uint8_t mode);
-void Referee_SendDrawingStringCmd(graphic_data_struct_t *pgraph, const uint8_t str[]);
-uint8_t Referee_IsDrawingBufferEmpty(void);
-void Referee_DrawingBufferFlush(void);
-void Referee_DrawingBufferPushDummy(void);
-void Referee_DrawingBufferPush(graphic_data_struct_t *pgraph);
-void Referee_DrawingTimeBaseCallback(void);
-uint32_t Referee_PackGraphicData(graphic_data_struct_t *pgraph, uint32_t graph_id, 
-                                 Draw_OperateType operate_type, Draw_GraphicType graphic_type, uint8_t layer,
-                                 Draw_Color color, uint16_t start_angle, uint16_t end_angle, 
-                                 uint8_t width, uint16_t start_x, uint16_t start_y,
-                                 uint16_t radius, uint16_t end_x, uint16_t end_y);
-uint32_t Referee_PackFloatGraphicData(graphic_data_struct_t *pgraph, uint32_t graph_id, 
-                                      Draw_OperateType operate_type, uint8_t layer,
-                                      Draw_Color color, uint16_t font_size, uint16_t decimal_digit, 
-                                      uint8_t width, uint16_t start_x, uint16_t start_y, float value);
-uint32_t Referee_PackIntGraphicData(graphic_data_struct_t *pgraph, uint32_t graph_id, 
-                                    Draw_OperateType operate_type, uint8_t layer,
-                                    Draw_Color color, uint16_t font_size,
-                                    uint8_t width, uint16_t start_x, uint16_t start_y, int value);
-uint32_t Referee_PackStringGraphicData(graphic_data_struct_t *pgraph, uint32_t graph_id, 
-                                       Draw_OperateType operate_type, uint8_t layer,
-                                       Draw_Color color, uint16_t font_size, uint8_t length,
-                                       uint8_t width, uint16_t start_x, uint16_t start_y);
-
-void Draw_ClearLayer(uint8_t layer);
-void Draw_ClearAll(void);
-void Draw_Delete(uint32_t graph_id);
-void Draw_AddLine(uint32_t graph_id, uint8_t layer, Draw_Color color, uint8_t width, 
-                  uint16_t start_x, uint16_t start_y, uint16_t end_x, uint16_t end_y);
-void Draw_ModifyLine(uint32_t graph_id, uint8_t layer, Draw_Color color, uint8_t width, 
-                     uint16_t start_x, uint16_t start_y, uint16_t end_x, uint16_t end_y);
-void Draw_AddRectangle(uint32_t graph_id, uint8_t layer, Draw_Color color, uint8_t width, 
-                       uint16_t start_x, uint16_t start_y, uint16_t end_x, uint16_t end_y);
-void Draw_ModifyRectangle(uint32_t graph_id, uint8_t layer, Draw_Color color, uint8_t width, 
-                          uint16_t start_x, uint16_t start_y, uint16_t end_x, uint16_t end_y);
-void Draw_AddCircle(uint32_t graph_id, uint8_t layer, Draw_Color color, uint8_t width, 
-                    uint16_t center_x, uint16_t center_y, uint16_t radius);
-void Draw_ModifyCircle(uint32_t graph_id, uint8_t layer, Draw_Color color, uint8_t width, 
-                       uint16_t center_x, uint16_t center_y, uint16_t radius);
-void Draw_AddEllipse(uint32_t graph_id, uint8_t layer, Draw_Color color, uint8_t width, 
-                     uint16_t center_x, uint16_t center_y, uint16_t radius_x, uint16_t radius_y);
-void Draw_ModifyEllipse(uint32_t graph_id, uint8_t layer, Draw_Color color, uint8_t width, 
-                        uint16_t center_x, uint16_t center_y, uint16_t radius_x, uint16_t radius_y);
-void Draw_AddArc(uint32_t graph_id, uint8_t layer, Draw_Color color, uint16_t start_angle, uint16_t end_angle, 
-                 uint8_t width, uint16_t center_x, uint16_t center_y, uint16_t radius_x, uint16_t radius_y);
-void Draw_ModifyArc(uint32_t graph_id, uint8_t layer, Draw_Color color, uint16_t start_angle, uint16_t end_angle, 
-                    uint8_t width, uint16_t center_x, uint16_t center_y, uint16_t radius_x, uint16_t radius_y);
-void Draw_AddFloat(uint32_t graph_id, uint8_t layer, Draw_Color color, uint16_t font_size, uint16_t decimal_digit, 
-                   uint8_t width, uint16_t start_x, uint16_t start_y, float value);
-void Draw_ModifyFloat(uint32_t graph_id, uint8_t layer, Draw_Color color, uint16_t font_size, uint16_t decimal_digit, 
-                      uint8_t width, uint16_t start_x, uint16_t start_y, float value);
-void Draw_AddInt(uint32_t graph_id, uint8_t layer, Draw_Color color, uint16_t font_size,
-                 uint8_t width, uint16_t start_x, uint16_t start_y, int value);
-void Draw_ModifyInt(uint32_t graph_id, uint8_t layer, Draw_Color color, uint16_t font_size,
-                    uint8_t width, uint16_t start_x, uint16_t start_y, int value);
-void Draw_AddString(uint32_t graph_id, uint8_t layer, Draw_Color color, uint16_t font_size, 
-                    uint8_t width, uint16_t start_x, uint16_t start_y, const char str[]);
-void Draw_ModifyString(uint32_t graph_id, uint8_t layer, Draw_Color color, uint16_t font_size,
-                       uint8_t width, uint16_t start_x, uint16_t start_y, const char str[]);
-
 uint8_t Referee_IsRefereeOffline(void);
 uint8_t Referee_CheckDataLengthByCmdID(uint16_t cmd_id, uint16_t data_length);
 uint8_t Referee_ParseRobotCustomData(uint8_t* data, uint16_t data_length);
 uint8_t Referee_ParseRefereeCmd(uint16_t cmd_id, uint8_t* data, uint16_t data_length);
 void Referee_DecodeRefereeData(uint8_t* buff, uint16_t rxdatalen);
 void Referee_RXCallback(UART_HandleTypeDef* huart);
-
-extern lqw_bref_data bref_data;
-
-void lqw_update_referee(uint16_t cmd_id,uint16_t data_lengh,uint8_t * data_buffer );
 
 #endif
 

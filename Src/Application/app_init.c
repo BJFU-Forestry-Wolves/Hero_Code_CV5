@@ -28,6 +28,7 @@
 #include "protocol_common.h"
 #include "periph_autoaim.h"
 #include "app_autoaim.h"
+#include "module_supercap.h"
 
 
 
@@ -48,7 +49,7 @@ void Init_InitAll() {
     Referee_InitReferee(); 						// 初始化裁判系统
     Servo_InitAllServos(); 						// 初始化所有舵机
 	
-  	Referee_Setup(); // 设置裁判系统
+//  	Referee_Setup(); // 设置裁判系统
 
 		GimbalPitch_InitGimbalPitch(); 		// 初始化云台Pitch轴
 		GimbalYaw_InitGimbalYaw(); 				// 初始化云台Yaw轴
@@ -61,6 +62,9 @@ void Init_InitAll() {
 
 //    Remote_RemotrControlInit(); 				// 初始化遥控器控制
     Protocol_InitProtocol(); 					// 初始化通信协议
+		
+		SuperCap_InitHeader(&CapHeader);
+		SuperCap_SetPower(&hcan1,&CapHeader,70);
 }
 
 

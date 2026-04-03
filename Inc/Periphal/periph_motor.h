@@ -20,7 +20,7 @@ extern "C" {
 #include "alg_filter.h"
 
 
-#define MOTOR_GROUP_NUM 3
+#define MOTOR_GROUP_NUM 4
 
 typedef enum {      
     Motor_TYPE_NOT_CONNECTED    = 0,
@@ -73,7 +73,7 @@ typedef void (*Motor_EncoderCallbackFuncTypeDef)(Motor_MotorTypeDef*, uint8_t[],
 extern Motor_MotorGroupTypeDef Motor_ChassisMotors;
 extern Motor_MotorGroupTypeDef Motor_PitchMotors;        
 extern Motor_MotorGroupTypeDef Motor_ShootMotors;
-
+//extern Motor_MotorGroupTypeDef Motor_FeedMotors;
 
 extern Motor_MotorTypeDef Motor_ChassisFontRightMotor;
 extern Motor_MotorTypeDef Motor_ChassisFontLeftMotor;

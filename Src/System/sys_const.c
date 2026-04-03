@@ -35,7 +35,7 @@ const float Const_HeatCtrlSingleCount               = 10;
 const float Const_HeatCtrlStopLimit                 = 10;
 
 const float Const_ShooterSlowSpeed                  = 150.0f;
-const float Const_ShooterFastSpeed                  = 300.0f;			//默认情况下400可以在室内室温条件下打到16m/s的弹速，注意弹速会随温度变化
+const float Const_ShooterFastSpeed                  = 235.0f;			//默认情况下400可以在室内室温条件下打到16m/s的弹速，注意弹速会随温度变化
 
 //键鼠模式pitch与yaw灵敏度
 float MOUSE_PITCH_ANGLE_TO_FACT             			= 0.004f;
@@ -52,14 +52,14 @@ const float Const_WHEELLEG_REMOTE_YAW_GAIN              = 0.0003;
 const float Const_WHEELLEG_REMOTE_X_GAIN                = 0.000022;
 const float Const_WHEELLEG_REMOTE_LEN_GAIN              = 0.00000028;
 
-const float REMOTE_PITCH_ANGLE_TO_REF                   = -0.0005f;
+const float REMOTE_PITCH_ANGLE_TO_REF                   = 0.0005f;
 
 const float REMOTE_CHASSIS_VX_GAIN                  = 0.5f;
 const float REMOTE_CHASSIS_VY_GAIN									= -0.5f;
 const float REMOTE_CHASSIS_SEP_WZ_GAIN							= -0.1f;
-const float REMOTE_CHASSIS_FOLLOW_WZ_GAIN						= 24.0f;
+const float REMOTE_CHASSIS_FOLLOW_WZ_GAIN						= 15.0f;
 const float REMOTE_CHASSIS_XTL_WZ_GAIN							= 1.2f;
-float CHASSIS_YAW_ANGLE_OFFSET											= 124.0f;					//yaw轴初始角,可以通过程序调整
+float CHASSIS_YAW_ANGLE_OFFSET											= 110.9f;					//yaw轴初始角,可以通过程序调整
 const float CHASSIS_XTL_WZ													= 200.0f;//234
 float Const_PITCH_UMAXANGLE                       = 24.0f;
 float Const_PITCH_UMAXANGLE_GRYO                  = 18.0f;  
@@ -76,10 +76,10 @@ const float Const_GimbalPitchSpdParam[4][5] = {
 
 // yaw gimbal param
 const float Const_GimbalYawSpdParam[4][5] = {
-    {8.0f, 0, 0, 0, 20.0f}, {0.1f, -1}, {0, 0}, {-1, -1}};
+    {6.4f, 0, 0, 0, 20.0f}, {0.1f, -1}, {0, 0}, {-1, -1}};
 
 const float Const_GimbalYawAngParam[4][5] = {
-    {0.4f, 0, 0, 0, 5.0f}, {0.1f, -1}, {0, 0}, {-1, -1}};
+    {0.25f, 0, 0, 0, 5.0f}, {0.1f, -1}, {0, 0}, {-1, -1}};
 
 
 // 射击组电机PID赋值
@@ -88,9 +88,9 @@ const float Const_GimbalYawAngParam[4][5] = {
  float Const_ShootRightParam[4][5] = {
     {0.04f, 0.01f, 0.04, 40.0f, 20.0f}, {0.1f, -1}, {0, 0}, {-1, -1}};
  float const Const_FeedAngParam[4][5] = {
-    {2.0f, 0, 0.2, 0, 30.0f}, {0.1f, -1}, {0, 0}, {-1, -1}};
+    {1.5f, 0, 0.2, 0, 30.0f}, {0.1f, -1}, {0, 0}, {-1, -1}};
 const float Const_FeedSpdParam[4][5] = {
-    {1.2f, 0.06, 0, 3, 20.0f}, {0.1f, -1}, {0, 0}, {-1, -1}};
+    {1.0f, 0.06, 0, 3, 20.0f}, {0.1f, -1}, {0, 0}, {-1, -1}};
 
 		
 // 底盘PID参数

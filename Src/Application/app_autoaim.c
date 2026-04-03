@@ -322,13 +322,13 @@ void Tidy_send_vision(VisionDataSend_Typedef *visionDataSend)
 	visionDataSend->pitch_angle.pitch_gyro  = (int16_t)(INS.Roll * 100);
 	visionDataSend->yaw_acc_data.yaw_acc 	  = (int16_t)(INS.Accel[0] * 100);
 	visionDataSend->pitch_acc_data.pitch_acc= (int16_t)(INS.Accel[2] * 100);
-	visionDataSend->robotID									= bref_data.robot_id;			
-	visionDataSend->shoot_speed              =(uint8_t)(bref_data.init_speed*10.0);
+	visionDataSend->robotID									= referee->status.robot_id;			
+	visionDataSend->shoot_speed              =(uint8_t)(referee->what_can_I_shoot.speed*10.0);
 //	visionDataSend->shoot_speed              =(uint8_t)15.0;
 	
-	if(referee->bullet_speed != 0)
-	last_shoot_speed = referee->bullet_speed;
-	else if(referee->bullet_speed == 0)
+	if(referee->what_can_I_shoot.frequency != 0)
+	last_shoot_speed = referee->what_can_I_shoot.frequency;
+	else if(referee->what_can_I_shoot.frequency == 0)
 	last_shoot_speed = 15.0f;
 
 //  visionDataSend.CRCcode                 = 0;       //CRCÐ£Ñé;

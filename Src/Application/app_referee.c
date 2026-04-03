@@ -12,8 +12,8 @@ void Referee_Task(void const * argument) {
 //			referee_reset_flag = 0;
 //			HAL_Delay(100);
 //		}
-//		Referee_Update();
-//		osDelay(200);
+		Referee_Update();
+		osDelay(200);
 //		float* power = powerConstPtr();
 //		*power = 		bref_data.chass_power * 150;
 

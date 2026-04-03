@@ -145,23 +145,23 @@ void MX_FREERTOS_Init(void) {
   Init_TaskHandleHandle = osThreadCreate(osThread(Init_TaskHandle), NULL);
 
   /* definition and creation of Comm_TaskHandle */
-//  osThreadDef(Comm_TaskHandle, Comm_Task, osPriorityRealtime, 0, 128);
-//  Comm_TaskHandleHandle = osThreadCreate(osThread(Comm_TaskHandle), NULL);
+  osThreadDef(Comm_TaskHandle, Comm_Task, osPriorityRealtime, 0, 128);
+  Comm_TaskHandleHandle = osThreadCreate(osThread(Comm_TaskHandle), NULL);
 
   /* definition and creation of Ins_TaskHandler */
   osThreadDef(Ins_TaskHandler, Ins_Task, osPriorityRealtime, 0, 128);
   Ins_TaskHandlerHandle = osThreadCreate(osThread(Ins_TaskHandler), NULL);
 
   /* definition and creation of WatchDog_TaskHa */
-//  osThreadDef(WatchDog_TaskHa, WatchDog_Task, osPriorityHigh, 0, 128);
-//  WatchDog_TaskHaHandle = osThreadCreate(osThread(WatchDog_TaskHa), NULL);
+  osThreadDef(WatchDog_TaskHa, WatchDog_Task, osPriorityHigh, 0, 128);
+  WatchDog_TaskHaHandle = osThreadCreate(osThread(WatchDog_TaskHa), NULL);
 
   /* definition and creation of Shoot_TaskHandl */
   osThreadDef(Shoot_TaskHandl, Shoot_Task, osPriorityRealtime, 0, 128);
   Shoot_TaskHandlHandle = osThreadCreate(osThread(Shoot_TaskHandl), NULL);
 
   /* definition and creation of Remote_TaskHand */
-  osThreadDef(Remote_TaskHand, Remote_Task, osPriorityRealtime, 0, 128);
+  osThreadDef(Remote_TaskHand, Remote_Task, osPriorityRealtime, 0, 256);
   Remote_TaskHandHandle = osThreadCreate(osThread(Remote_TaskHand), NULL);
 
   /* definition and creation of Gimbal_TaskHand */
@@ -169,8 +169,8 @@ void MX_FREERTOS_Init(void) {
   Gimbal_TaskHandHandle = osThreadCreate(osThread(Gimbal_TaskHand), NULL);
 
   /* definition and creation of Referee_TaskHa */
-//  osThreadDef(Referee_TaskHa, Referee_Task, osPriorityRealtime, 0, 128);
-//  Referee_TaskHaHandle = osThreadCreate(osThread(Referee_TaskHa), NULL);
+  osThreadDef(Referee_TaskHa, Referee_Task, osPriorityRealtime, 0, 128);
+  Referee_TaskHaHandle = osThreadCreate(osThread(Referee_TaskHa), NULL);
 
   /* definition and creation of Chassis_TaskHan */
   osThreadDef(Chassis_TaskHan, Chassis_Task, osPriorityRealtime, 0, 128);
